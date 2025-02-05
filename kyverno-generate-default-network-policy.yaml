@@ -7,8 +7,7 @@ metadata:
     policies.kyverno.io/category: Multi-Tenancy
     policies.kyverno.io/severity: medium
     policies.kyverno.io/description: >-
-      This policy automatically generates a default NetworkPolicy in each namespace 
-      that allows intra-namespace traffic while denying ingress and egress from other namespaces.
+      This policy automatically generates a default NetworkPolicy in each namespace.
 spec:
   rules:
     - name: generate-default-deny-ingress-network-policy
@@ -32,3 +31,44 @@ spec:
             policyTypes:
               - Ingress
             ingress: []
+---
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: generate-allow-all-within-namespace
+  annotations:
+    policies.kyverno.io/title: Generate Default Network Policy
+    policies.kyverno.io/category: Multi-Tenancy
+    policies.kyverno.io/severity: medium
+    policies.kyverno.io/description: >-
+      This policy automatically generates a default NetworkPolicy in each namespace 
+      that allows intra-namespace traffic while denying ingress and egress from other namespaces.
+spec:
+  rules:
+    - name: generate-allow-all-within-namespace-network-policy
+      match:
+        any:
+          - resources:
+              kinds:
+                - Namespace
+      generate:
+        generateExisting: true
+        kind: NetworkPolicy
+        apiVersion: networking.k8s.io/v1
+        name: allow-all-within-namespace
+        namespace: "{{request.object.metadata.name}}"
+        synchronize: true
+        data:
+          metadata:
+            name: allow-all-within-namespace
+          spec:
+            podSelector: {} # Apply to all pods in the namespace
+            policyTypes:
+              - Ingress
+              - Egress
+            ingress:
+              - from:
+                  - podSelector: {} # Allows all traffic from any pod in the same namespace
+            egress:
+              - to:
+                  - podSelector: {} # Allows all traffic to any pod in the same namespace
